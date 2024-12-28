@@ -1,4 +1,57 @@
 menu "Embedded SDK Configuration"
+    config MEDIA_I2S_RX_TX_SHARED
+        bool "I2S RX/TX Shared"
+        default n
+        help
+            If this option is set (not default), 
+            the I2S RX and TX will share the same I2S channel.
+    config MEDIA_I2S_RX_PDM
+        bool "I2S RX PDM"
+        depends on !MEDIA_I2S_RX_TX_SHARED
+        default n
+        help
+            If this option is set (not default), 
+            the I2S RX will use PDM.
+    config MEDIA_I2S_RX_MCLK_PIN
+        int "I2S RX MCLK Pin"
+        default 0
+        help
+            The pin number for I2S RX MCLK.
+    config MEDIA_I2S_RX_BCLK_PIN
+        int "I2S RX BCLK Pin"
+        default 0
+        help
+            The pin number for I2S RX BCLK.
+    config MEDIA_I2S_RX_LRCLK_PIN
+        int "I2S RX LRCLK Pin"
+        default 0
+        help
+            The pin number for I2S RX LRCLK.
+    config MEDIA_I2S_RX_DATA_PIN
+        int "I2S RX DATA Pin"
+        default 0
+        help
+            The pin number for I2S RX DATA.
+    config MEDIA_I2S_TX_MCLK_PIN
+        int "I2S TX MCLK Pin"
+        default 0
+        help
+            The pin number for I2S TX MCLK.
+    config MEDIA_I2S_TX_BCLK_PIN
+        int "I2S TX BCLK Pin"
+        default 0
+        help
+            The pin number for I2S TX BCLK.
+    config MEDIA_I2S_TX_LRCLK_PIN
+        int "I2S TX LRCLK Pin"
+        default 0
+        help
+            The pin number for I2S TX LRCLK.
+    config MEDIA_I2S_TX_DATA_PIN
+        int "I2S TX DATA Pin"
+        default 0
+        help
+            The pin number for I2S TX DATA.
     config MEDIA_ENABLE_DEBUG_AUDIO_UDP_CLIENT
         bool "Enable Debug Audio UDP Client"
         default n

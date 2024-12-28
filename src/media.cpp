@@ -1,4 +1,4 @@
-#include <driver/i2s.h>
+#include <driver/i2s_std.h>
 #include <opus.h>
 
 #include "main.h"
@@ -14,11 +14,26 @@
 #define SAMPLE_RATE 8000
 #define BUFFER_SAMPLES 320
 
-#define MCLK_PIN 0
-#define BCLK_PIN 34
-#define LRCLK_PIN 33
-#define DATA_IN_PIN 14
-#define DATA_OUT_PIN 13
+#ifdef CONFIG_MEDIA_I2S_RX_TX_SHARED
+static i2s_chan_handle_t s_i2s_tx_handle = nullptr;
+static constexpr i2s_chan_handle_t get_i2s_tx_handle() { return s_i2s_tx_handle; }
+static constexpr i2s_chan_handle_t get_i2s_rx_handle() { return s_i2s_tx_handle; }
+#else // CONFIG_MEDIA_I2S_RX_TX_SHARED
+static i2s_chan_handle_t s_i2s_tx_handle = nullptr;
+static i2s_chan_handle_t s_i2s_rx_handle = nullptr;
+static constexpr i2s_chan_handle_t get_i2s_tx_handle() { return s_i2s_tx_handle; }
+static constexpr i2s_chan_handle_t get_i2s_rx_handle() { return s_i2s_rx_handle; }
+#endif // CONFIG_MEDIA_I2S_RX_TX_SHARED
+
+#define RX_MCLK_PIN  CONFIG_MEDIA_I2S_RX_MCLK_PIN
+#define RX_BCLK_PIN  CONFIG_MEDIA_I2S_RX_BCLK_PIN
+#define RX_LRCLK_PIN CONFIG_MEDIA_I2S_RX_LRCLK_PIN
+#define RX_DATA_PIN  CONFIG_MEDIA_I2S_RX_DATA_PIN
+
+#define TX_MCLK_PIN  CONFIG_MEDIA_I2S_TX_MCLK_PIN
+#define TX_BCLK_PIN  CONFIG_MEDIA_I2S_TX_BCLK_PIN
+#define TX_LRCLK_PIN CONFIG_MEDIA_I2S_TX_LRCLK_PIN
+#define TX_DATA_PIN  CONFIG_MEDIA_I2S_TX_DATA_PIN
 
 #define OPUS_ENCODER_BITRATE 30000
 #define OPUS_ENCODER_COMPLEXITY 0
@@ -106,10 +121,10 @@ static void initialize_microphone_cores3()
 }
 
 void oai_init_audio_capture() {
-  ESP_LOGI(TAG, "Initializing microphone");
-  initialize_microphone_cores3();
-  ESP_LOGI(TAG, "Initializing speaker");
-  initialize_speaker_cores3();
+  // ESP_LOGI(TAG, "Initializing microphone");
+  // initialize_microphone_cores3();
+  // ESP_LOGI(TAG, "Initializing speaker");
+  // initialize_speaker_cores3();
 
 #ifdef CONFIG_MEDIA_ENABLE_DEBUG_AUDIO_UDP_CLIENT
   // Initialize UDP socket for debug.
@@ -128,35 +143,76 @@ void oai_init_audio_capture() {
 #endif // CONFIG_MEDIA_ENABLE_DEBUG_AUDIO_UDP_CLIENT
 
   ESP_LOGI(TAG, "Initializing I2S for audio input/output");
-  i2s_config_t i2s_config = {
-      .mode = (i2s_mode_t)(I2S_MODE_MASTER | I2S_MODE_TX | I2S_MODE_RX),
-      .sample_rate = SAMPLE_RATE,
-      .bits_per_sample = I2S_BITS_PER_SAMPLE_16BIT,
-      .channel_format = I2S_CHANNEL_FMT_ONLY_LEFT,
-      .communication_format = I2S_COMM_FORMAT_I2S,
-      .intr_alloc_flags = ESP_INTR_FLAG_LEVEL1,
-      .dma_buf_count = 8,
-      .dma_buf_len = BUFFER_SAMPLES,
-      .use_apll = 1,
-      .tx_desc_auto_clear = true,
-  };
-  if (i2s_driver_install(I2S_NUM_0, &i2s_config, 0, NULL) != ESP_OK) {
-    ESP_LOGE(TAG, "Failed to configure I2S driver for audio input/output");
-    return;
+  {
+    i2s_chan_config_t chan_config = I2S_CHANNEL_DEFAULT_CONFIG(I2S_NUM_AUTO, I2S_ROLE_MASTER);
+#ifdef CONFIG_MEDIA_I2S_RX_TX_SHARED
+    ESP_ERROR_CHECK(i2s_new_channel(&chan_config, &s_i2s_tx_handle, &s_i2s_rx_handle));
+#else // CONFIG_MEDIA_I2S_RX_TX_SHARED
+    ESP_ERROR_CHECK(i2s_new_channel(&chan_config, &s_i2s_tx_handle, nullptr));
+#endif // CONFIG_MEDIA_I2S_RX_TX_SHARED
+    i2s_std_config_t std_cfg = {
+        .clk_cfg = I2S_STD_CLK_DEFAULT_CONFIG(SAMPLE_RATE),
+        .slot_cfg = I2S_STD_PHILIPS_SLOT_DEFAULT_CONFIG(I2S_DATA_BIT_WIDTH_16BIT, I2S_SLOT_MODE_MONO ),
+        .gpio_cfg = {
+            .mclk = gpio_num_t(CONFIG_MEDIA_I2S_TX_MCLK_PIN),
+            .bclk = gpio_num_t(CONFIG_MEDIA_I2S_TX_BCLK_PIN),
+            .ws = gpio_num_t(CONFIG_MEDIA_I2S_TX_LRCLK_PIN),
+            .dout = gpio_num_t(CONFIG_MEDIA_I2S_TX_DATA_PIN),
+            .din = gpio_num_t(CONFIG_MEDIA_I2S_RX_DATA_PIN),
+            .invert_flags = {
+                .mclk_inv = false,
+                .bclk_inv = false,
+                .ws_inv = false,
+            },
+        },
+    };
+    i2s_channel_init_std_mode(s_i2s_tx_handle, &std_cfg);
+    i2s_channel_enable(s_i2s_tx_handle);
+#ifdef CONFIG_MEDIA_I2S_RX_TX_SHARED
+    i2s_channel_init_std_mode(s_i2s_rx_handle, &std_cfg);
+    i2s_channel_enable(s_i2s_rx_handle);
+#endif // CONFIG_MEDIA_I2S_RX_TX_SHARED    
   }
 
-  i2s_pin_config_t pin_config = {
-      .mck_io_num = MCLK_PIN,
-      .bck_io_num = BCLK_PIN,
-      .ws_io_num = LRCLK_PIN,
-      .data_out_num = DATA_OUT_PIN,
-      .data_in_num = DATA_IN_PIN,
-  };
-  if (i2s_set_pin(I2S_NUM_0, &pin_config) != ESP_OK) {
-    ESP_LOGE(TAG, "Failed to set I2S pins for audio input/output");
-    return;
+#ifndef CONFIG_MEDIA_I2S_RX_TX_SHARED
+  {
+    i2s_chan_config_t chan_config = I2S_CHANNEL_DEFAULT_CONFIG(I2S_NUM_AUTO, I2S_ROLE_MASTER);
+    ESP_ERROR_CHECK(i2s_new_channel(&chan_config, nullptr, &s_i2s_rx_handle));
+#ifdef CONFIG_MEDIA_I2S_RX_PDM
+    i2s_pdm_rx_config_t pdm_rx_cfg = {
+        .clk_cfg = I2S_PDM_RX_CLK_DEFAULT_CONFIG(SAMPLE_RATE),
+        .slot_cfg = I2S_PDM_RX_SLOT_DEFAULT_CONFIG(I2S_DATA_BIT_WIDTH_16BIT, I2S_SLOT_MODE_MONO),
+        .gpio_cfg = {
+            .clk = gpio_num_t(CONFIG_MEDIA_I2S_RX_LRCLK_PIN),
+            .din = gpio_num_t(CONFIG_MEDIA_I2S_RX_DATA_PIN),
+            .invert_flags = {
+                .clk_inv = false,
+            },
+        },
+    };
+    ESP_ERROR_CHECK(i2s_channel_init_pdm_rx_mode(s_i2s_rx_handle, &pdm_rx_cfg));
+#else // CONFIG_MEDIA_I2S_RX_PDM
+    i2s_std_config_t std_cfg = {
+        .clk_cfg = I2S_STD_CLK_DEFAULT_CONFIG(SAMPLE_RATE),
+        .slot_cfg = I2S_STD_PHILIPS_SLOT_DEFAULT_CONFIG(I2S_DATA_BIT_WIDTH_16BIT, I2S_SLOT_MODE_MONO ),
+        .gpio_cfg = {
+            .mclk = gpio_num_t(CONFIG_MEDIA_I2S_RX_MCLK_PIN),
+            .bclk = gpio_num_t(CONFIG_MEDIA_I2S_RX_BCLK_PIN),
+            .ws = gpio_num_t(CONFIG_MEDIA_I2S_RX_LRCLK_PIN),
+            .dout = I2S_PIN_NO_CHANGE,
+            .din = gpio_num_t(CONFIG_MEDIA_I2S_RX_DATA_PIN),
+            .invert_flags = {
+                .mclk_inv = false,
+                .bclk_inv = false,
+                .ws_inv = false,
+            },
+        },
+    };
+    i2s_channel_init_std_mode(s_i2s_rx_handle, &std_cfg);
+#endif // CONFIG_MEDIA_I2S_RX_PDM
+    i2s_channel_enable(s_i2s_rx_handle);
   }
-  i2s_zero_dma_buffer(I2S_NUM_0);
+#endif // CONFIG_MEDIA_I2S_RX_TX_SHARED
 }
 
 opus_int16 *output_buffer = NULL;
@@ -179,7 +235,7 @@ void oai_audio_decode(uint8_t *data, size_t size) {
 
   if (decoded_size > 0) {
     std::size_t bytes_written = 0;
-    if( esp_err_t err = i2s_write(I2S_NUM_0, output_buffer, decoded_size * sizeof(opus_int16),
+    if( esp_err_t err = i2s_channel_write(get_i2s_tx_handle(), output_buffer, decoded_size * sizeof(opus_int16),
               &bytes_written, portMAX_DELAY); err != ESP_OK ) {
       ESP_LOGE(TAG, "Failed to write audio data to I2S: %s", esp_err_to_name(err));
     }
@@ -217,13 +273,13 @@ void oai_init_audio_encoder() {
 
 void oai_send_audio(PeerConnection *peer_connection) {
   size_t bytes_read = 0;
-  if( esp_err_t err = i2s_read(I2S_NUM_0, encoder_input_buffer, BUFFER_SAMPLES*sizeof(opus_int16), &bytes_read,
+  if( esp_err_t err = i2s_channel_read(get_i2s_rx_handle(), encoder_input_buffer, BUFFER_SAMPLES*sizeof(opus_int16), &bytes_read,
            portMAX_DELAY) ; err != ESP_OK ) {
     ESP_LOGE(TAG, "Failed to read audio data from I2S: %s", esp_err_to_name(err));
   }
 
 #ifdef CONFIG_MEDIA_ENABLE_DEBUG_AUDIO_UDP_CLIENT
-  sendto(s_debug_audio_sock, encoder_input_buffer, BUFFER_SAMPLES*sizeof(opus_int16), 0, (struct sockaddr *)&s_debug_audio_in_dest_addr, sizeof(s_debug_audio_in_dest_addr));
+  sendto(s_debug_audio_sock, encoder_input_buffer, bytes_read, 0, (struct sockaddr *)&s_debug_audio_in_dest_addr, sizeof(s_debug_audio_in_dest_addr));
 #endif // CONFIG_MEDIA_ENABLE_DEBUG_AUDIO_UDP_CLIENT
 
   auto encoded_size =
