@@ -1,0 +1,76 @@
+menu "libpeer"
+    config LIBPEER_SCTP_MTU
+        int "SCTP MTU"
+        default 1200
+        help
+            The SCTP MTU size.
+    config LIBPEER_CONFIG_MTU
+        int "Config MTU"
+        default 1300
+        help
+            The Config MTU size.
+    config LIBPEER_RSA_KEY_LENGTH
+        int "RSA Key Length"
+        default 1024
+        help
+            The RSA Key Length.
+    config LIBPEER_VIDEO_RB_DATA_MTUS
+        int "Video RB Data MTUs"
+        default 64
+        help
+            The Video RB Data MTUs.
+    config LIBPEER_AUDIO_RB_DATA_MTUS
+        int "Audio RB Data MTUs"
+        default 64
+        help
+            The Audio RB Data MTUs.
+    config LIBPEER_DATA_RB_DATA_MTUS
+        int "Data RB Data MTUs"
+        default 128
+        help
+            The Data RB Data MTUs.
+    config LIBPEER_AUDIO_LATENCY_MS
+        int "Audio Latency (ms)"
+        default 20
+        help
+            The Audio Latency in milliseconds.
+    config LIBPEER_KEEPALIVE_CONNCHECK
+        int "Keepalive Conncheck interval"
+        default 0
+        help
+            The Keepalive Conncheck.
+    config LIBPEER_IPV6
+        bool "Enable IPv6"
+        default n
+        help
+            Enable IPv6 for libpeer.
+    config LIBPEER_IFACE_PREFIX
+        string "Interface Prefix"
+        default ""
+        help
+            The Interface Prefix.
+    choice LIBPEER_LOG_LEVEL
+        prompt "Log Level"
+        default LIBPEER_LOG_LEVEL_INFO
+        help
+            The Log Level.
+        config LIBPEER_LOG_LEVEL_DEBUG
+            bool "Debug"
+        config LIBPEER_LOG_LEVEL_INFO
+            bool "Info"
+        config LIBPEER_LOG_LEVEL_WARN
+            bool "Warn"
+        config LIBPEER_LOG_LEVEL_ERROR
+            bool "Error"
+    endchoice
+    config LIBPEER_LOG_REDIRECT
+        bool "Redirect Log"
+        default n
+        help
+            Redirect Log.
+    config LIBPEER_DISABLE_PEER_SIGNALING
+        bool "Disable Peer Signaling"
+        default n
+        help
+            Disable Peer Signaling.
+endmenu

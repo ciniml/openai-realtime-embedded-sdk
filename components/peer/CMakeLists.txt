@@ -7,15 +7,9 @@ idf_component_register(
   REQUIRES mbedtls srtp json esp_netif
 )
 
-# Disable building of usrsctp
-file(READ ${CMAKE_CURRENT_SOURCE_DIR}/../../deps/libpeer/src/config.h INPUT_CONTENT)
-string(REPLACE "#define HAVE_USRSCTP" "" MODIFIED_CONTENT ${INPUT_CONTENT})
-file(WRITE ${CMAKE_CURRENT_SOURCE_DIR}/../../deps/libpeer/src/config.h ${MODIFIED_CONTENT})
-
-# Disable KeepAlives
-file(READ ${CMAKE_CURRENT_SOURCE_DIR}/../../deps/libpeer/src/config.h INPUT_CONTENT)
-string(REPLACE "#define KEEPALIVE_CONNCHECK 10000" "#define KEEPALIVE_CONNCHECK 0" MODIFIED_CONTENT ${INPUT_CONTENT})
-file(WRITE ${CMAKE_CURRENT_SOURCE_DIR}/../../deps/libpeer/src/config.h ${MODIFIED_CONTENT})
+# Overwrite config.h
+file(READ ${CMAKE_CURRENT_SOURCE_DIR}/config.h INPUT_CONTENT)
+file(WRITE ${CMAKE_CURRENT_SOURCE_DIR}/../../deps/libpeer/src/config.h ${INPUT_CONTENT})
 
 
 if(NOT IDF_TARGET STREQUAL linux)
