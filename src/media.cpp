@@ -144,7 +144,8 @@ void oai_init_audio_capture() {
 
   ESP_LOGI(TAG, "Initializing I2S for audio input/output");
   {
-    i2s_chan_config_t chan_config = I2S_CHANNEL_DEFAULT_CONFIG(I2S_NUM_AUTO, I2S_ROLE_MASTER);
+    i2s_chan_config_t chan_config = I2S_CHANNEL_DEFAULT_CONFIG(I2S_NUM_1, I2S_ROLE_MASTER);
+    chan_config.auto_clear = true;
 #ifdef CONFIG_MEDIA_I2S_RX_TX_SHARED
     ESP_ERROR_CHECK(i2s_new_channel(&chan_config, &s_i2s_tx_handle, &s_i2s_rx_handle));
 #else // CONFIG_MEDIA_I2S_RX_TX_SHARED
@@ -166,6 +167,14 @@ void oai_init_audio_capture() {
             },
         },
     };
+    std_cfg.slot_cfg.data_bit_width = i2s_data_bit_width_t::I2S_DATA_BIT_WIDTH_16BIT;
+    std_cfg.slot_cfg.slot_bit_width = i2s_slot_bit_width_t::I2S_SLOT_BIT_WIDTH_16BIT;
+    std_cfg.slot_cfg.slot_mode = i2s_slot_mode_t::I2S_SLOT_MODE_MONO;
+    std_cfg.slot_cfg.slot_mask = i2s_std_slot_mask_t::I2S_STD_SLOT_BOTH;
+    std_cfg.slot_cfg.ws_width = 16;
+    std_cfg.slot_cfg.ws_pol = false;
+    std_cfg.slot_cfg.bit_shift = true;
+    std_cfg.slot_cfg.msb_right = false;
     i2s_channel_init_std_mode(s_i2s_tx_handle, &std_cfg);
     i2s_channel_enable(s_i2s_tx_handle);
 #ifdef CONFIG_MEDIA_I2S_RX_TX_SHARED
@@ -176,7 +185,8 @@ void oai_init_audio_capture() {
 
 #ifndef CONFIG_MEDIA_I2S_RX_TX_SHARED
   {
-    i2s_chan_config_t chan_config = I2S_CHANNEL_DEFAULT_CONFIG(I2S_NUM_AUTO, I2S_ROLE_MASTER);
+    i2s_chan_config_t chan_config = I2S_CHANNEL_DEFAULT_CONFIG(I2S_NUM_0, I2S_ROLE_MASTER);
+    chan_config.auto_clear = true;
     ESP_ERROR_CHECK(i2s_new_channel(&chan_config, nullptr, &s_i2s_rx_handle));
 #ifdef CONFIG_MEDIA_I2S_RX_PDM
     i2s_pdm_rx_config_t pdm_rx_cfg = {
@@ -234,6 +244,14 @@ void oai_audio_decode(uint8_t *data, size_t size) {
       opus_decode(opus_decoder, data, size, output_buffer, BUFFER_SAMPLES, 0);
 
   if (decoded_size > 0) {
+#ifdef CONFIG_IDF_TARGET_ESP32
+    for(size_t i = 0; i < decoded_size * sizeof(opus_int16)/4; i++) {
+      const auto value = reinterpret_cast<std::uint32_t*>(output_buffer)[i];
+      const auto high_word = value >> 16;
+      const auto low_word = value & 0xFFFF;
+      reinterpret_cast<std::uint32_t*>(output_buffer)[i] = (low_word << 16) | high_word;
+    }
+#endif // CONFIG_IDF_TARGET_ESP32
     std::size_t bytes_written = 0;
     if( esp_err_t err = i2s_channel_write(get_i2s_tx_handle(), output_buffer, decoded_size * sizeof(opus_int16),
               &bytes_written, portMAX_DELAY); err != ESP_OK ) {
@@ -277,6 +295,14 @@ void oai_send_audio(PeerConnection *peer_connection) {
            portMAX_DELAY) ; err != ESP_OK ) {
     ESP_LOGE(TAG, "Failed to read audio data from I2S: %s", esp_err_to_name(err));
   }
+#ifdef CONFIG_IDF_TARGET_ESP32
+  for(size_t i = 0; i < bytes_read/4; i++) {
+    const auto value = reinterpret_cast<std::uint32_t*>(encoder_input_buffer)[i];
+    const auto high_word = value >> 16;
+    const auto low_word = value & 0xFFFF;
+    reinterpret_cast<std::uint32_t*>(encoder_input_buffer)[i] = (low_word << 16) | high_word;
+  }
+#endif // CONFIG_IDF_TARGET_ESP32
 
 #ifdef CONFIG_MEDIA_ENABLE_DEBUG_AUDIO_UDP_CLIENT
   sendto(s_debug_audio_sock, encoder_input_buffer, bytes_read, 0, (struct sockaddr *)&s_debug_audio_in_dest_addr, sizeof(s_debug_audio_in_dest_addr));

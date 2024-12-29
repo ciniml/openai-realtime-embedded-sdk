@@ -23,8 +23,21 @@ You can get a ESP32S3 for much less money on eBay/AliExpress.
 
 `protoc` must be in your path with `protobufc` installed.
 
-Call `set-target` with the platform you are targetting. Today only `linux` and `esp32s3` are supported.
-* `idf.py set-target esp32s3`
+Select the target board.
+
+* CoreS3 (SE) - `export SDK_CONFIG="sdkconfig.defaults;sdkconfig.defaults.cores3`
+* AtomS3      - `export SDK_CONFIG="sdkconfig.defaults;sdkconfig.defaults.atoms3`
+* Atom Lite   - `export SDK_CONFIG="sdkconfig.defaults;sdkconfig.defaults.atom_lite`
+
+Call `set-target` with the platform you are targetting. Today only `linux`, `esp32` and `esp32s3` are supported.
+
+* ESP32 targets   : Atom Lite
+    * `idf.py set-target esp32`
+
+* ESP32-S3 targets: CoreS3 (SE), AtomS3
+    * `idf.py set-target esp32s3`
+
+Note that to change the target, you have to remove the build directory. 
 
 Configure device specific settings. None needed at this time
 * `idf.py menuconfig`
