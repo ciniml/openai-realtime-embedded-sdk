@@ -26,8 +26,8 @@ You can get a ESP32S3 for much less money on eBay/AliExpress.
 Select the target board.
 
 * CoreS3 (SE) - `export SDK_CONFIG="sdkconfig.defaults;sdkconfig.defaults.cores3`
-* AtomS3      - `export SDK_CONFIG="sdkconfig.defaults;sdkconfig.defaults.atoms3`
-* Atom Lite   - `export SDK_CONFIG="sdkconfig.defaults;sdkconfig.defaults.atom_lite`
+* AtomS3    (with Atomic Speaker and PDM Microphone Unit) - `export SDK_CONFIG="sdkconfig.defaults;sdkconfig.defaults.atoms3`
+* Atom Lite (with Atomic Speaker and PDM Microphone Unit) - `export SDK_CONFIG="sdkconfig.defaults;sdkconfig.defaults.atom_lite`
 
 Call `set-target` with the platform you are targetting. Today only `linux`, `esp32` and `esp32s3` are supported.
 
@@ -50,8 +50,8 @@ Set your Wifi SSID + Password as env variables
 Build
 * `idf.py build`
 
-If you built for `esp32s3` run the following to flash to the device
-* `sudo -E idf.py flash`
+If you built for `esp32` or `esp32s3` run the following to flash to the device
+* `idf.py flash`
 
 If you built for `linux` you can run the binary directly
 * `./build/src.elf`
