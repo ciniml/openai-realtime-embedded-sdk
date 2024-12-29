@@ -52,6 +52,19 @@ menu "Embedded SDK Configuration"
         default 0
         help
             The pin number for I2S TX DATA.
+    config MEDIA_I2S_TX_SLOT_LEFT_ONLY
+        bool "I2S TX Slot Left Only"
+        default n
+        help
+            If this option is set (not default), 
+            the I2S TX will only use the left slot. 
+            Otherwise, it will use both left and right slots.
+    config MEDIA_INIT_MICROPHONE_AND_SPEAKER
+        bool "Init Microphone and Speaker"
+        default n
+        help
+            If this option is set (not default), 
+            the microphone and speaker will be initialized.
     config MEDIA_ENABLE_DEBUG_AUDIO_UDP_CLIENT
         bool "Enable Debug Audio UDP Client"
         default n

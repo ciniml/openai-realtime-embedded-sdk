@@ -14,16 +14,10 @@
 #define SAMPLE_RATE 8000
 #define BUFFER_SAMPLES 320
 
-#ifdef CONFIG_MEDIA_I2S_RX_TX_SHARED
-static i2s_chan_handle_t s_i2s_tx_handle = nullptr;
-static constexpr i2s_chan_handle_t get_i2s_tx_handle() { return s_i2s_tx_handle; }
-static constexpr i2s_chan_handle_t get_i2s_rx_handle() { return s_i2s_tx_handle; }
-#else // CONFIG_MEDIA_I2S_RX_TX_SHARED
 static i2s_chan_handle_t s_i2s_tx_handle = nullptr;
 static i2s_chan_handle_t s_i2s_rx_handle = nullptr;
 static constexpr i2s_chan_handle_t get_i2s_tx_handle() { return s_i2s_tx_handle; }
 static constexpr i2s_chan_handle_t get_i2s_rx_handle() { return s_i2s_rx_handle; }
-#endif // CONFIG_MEDIA_I2S_RX_TX_SHARED
 
 #define RX_MCLK_PIN  CONFIG_MEDIA_I2S_RX_MCLK_PIN
 #define RX_BCLK_PIN  CONFIG_MEDIA_I2S_RX_BCLK_PIN
@@ -121,10 +115,12 @@ static void initialize_microphone_cores3()
 }
 
 void oai_init_audio_capture() {
-  // ESP_LOGI(TAG, "Initializing microphone");
-  // initialize_microphone_cores3();
-  // ESP_LOGI(TAG, "Initializing speaker");
-  // initialize_speaker_cores3();
+#ifdef CONFIG_MEDIA_INIT_MICROPHONE_AND_SPEAKER
+  ESP_LOGI(TAG, "Initializing microphone");
+  initialize_microphone_cores3();
+  ESP_LOGI(TAG, "Initializing speaker");
+  initialize_speaker_cores3();
+#endif
 
 #ifdef CONFIG_MEDIA_ENABLE_DEBUG_AUDIO_UDP_CLIENT
   // Initialize UDP socket for debug.
@@ -170,11 +166,21 @@ void oai_init_audio_capture() {
     std_cfg.slot_cfg.data_bit_width = i2s_data_bit_width_t::I2S_DATA_BIT_WIDTH_16BIT;
     std_cfg.slot_cfg.slot_bit_width = i2s_slot_bit_width_t::I2S_SLOT_BIT_WIDTH_16BIT;
     std_cfg.slot_cfg.slot_mode = i2s_slot_mode_t::I2S_SLOT_MODE_MONO;
+#ifdef CONFIG_MEDIA_I2S_TX_SLOT_LEFT_ONLY
+    std_cfg.slot_cfg.slot_mask = i2s_std_slot_mask_t::I2S_STD_SLOT_LEFT;
+#else // CONFIG_MEDIA_I2S_TX_SLOT_LEFT_ONLY
     std_cfg.slot_cfg.slot_mask = i2s_std_slot_mask_t::I2S_STD_SLOT_BOTH;
+#endif // CONFIG_MEDIA_I2S_TX_SLOT_LEFT_ONLY
     std_cfg.slot_cfg.ws_width = 16;
     std_cfg.slot_cfg.ws_pol = false;
     std_cfg.slot_cfg.bit_shift = true;
+#if SOC_I2S_HW_VERSION_1
     std_cfg.slot_cfg.msb_right = false;
+#else
+    std_cfg.slot_cfg.left_align = true;
+    std_cfg.slot_cfg.big_endian = false;
+    std_cfg.slot_cfg.bit_order_lsb = false;
+#endif // SOC_I2S_HW_VERSION_1
     i2s_channel_init_std_mode(s_i2s_tx_handle, &std_cfg);
     i2s_channel_enable(s_i2s_tx_handle);
 #ifdef CONFIG_MEDIA_I2S_RX_TX_SHARED
@@ -209,7 +215,7 @@ void oai_init_audio_capture() {
             .mclk = gpio_num_t(CONFIG_MEDIA_I2S_RX_MCLK_PIN),
             .bclk = gpio_num_t(CONFIG_MEDIA_I2S_RX_BCLK_PIN),
             .ws = gpio_num_t(CONFIG_MEDIA_I2S_RX_LRCLK_PIN),
-            .dout = I2S_PIN_NO_CHANGE,
+            .dout = gpio_num_t(I2S_PIN_NO_CHANGE),
             .din = gpio_num_t(CONFIG_MEDIA_I2S_RX_DATA_PIN),
             .invert_flags = {
                 .mclk_inv = false,
