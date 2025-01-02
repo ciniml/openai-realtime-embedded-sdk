@@ -1,6 +1,7 @@
 #include <esp_http_client.h>
 #include <esp_log.h>
 #include <string.h>
+#include <vector>
 
 #include "main.h"
 
@@ -77,7 +78,18 @@ void oai_http_request(char *offer, char *answer) {
   config.event_handler = oai_http_event_handler;
   config.user_data = answer;
 
+#ifdef CONFIG_USE_WIFI_PROVISIONING_SOFTAP
+  extern esp_err_t oai_get_api_key(std::vector<char>& api_key);
+  std::vector<char> api_key;
+  if( auto err = oai_get_api_key(api_key); err != ESP_OK ) {
+    ESP_LOGE(LOG_TAG, "API key not set");
+  } else {
+    ESP_LOGI(LOG_TAG, "Using API key: %s", api_key.data());
+    snprintf(answer, MAX_HTTP_OUTPUT_BUFFER, "Bearer %s", api_key.data());
+  }
+#else // CONFIG_USE_WIFI_PROVISIONING_SOFTAP
   snprintf(answer, MAX_HTTP_OUTPUT_BUFFER, "Bearer %s", OPENAI_API_KEY);
+#endif
 
   esp_http_client_handle_t client = esp_http_client_init(&config);
   esp_http_client_set_method(client, HTTP_METHOD_POST);

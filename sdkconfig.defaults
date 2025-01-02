@@ -34,3 +34,6 @@ CONFIG_COMPILER_OPTIMIZATION_ASSERTIONS_DISABLE=y
 # Optimize internal SRAM utilization.
 # Allocate WiFi TX buffer dynamically to reduce max RAM usage.
 CONFIG_ESP_WIFI_DYNAMIC_TX_BUFFER=y
+
+# Increase HTTPD max request header length
+CONFIG_HTTPD_MAX_REQ_HDR_LEN=1024

@@ -89,6 +89,37 @@ menu "Embedded SDK Configuration"
         depends on MEDIA_ENABLE_DEBUG_AUDIO_UDP_CLIENT
         help
             The port to send the audio from speaker to for debugging.
+    config USE_WIFI_PROVISIONING_SOFTAP
+        bool "Use SoftAP for WiFi provisioning"
+        default n
+        help
+            Use SoftAP for WiFi provisioning
+    choice BSP_RESET_PROVISIONING
+        prompt "Reset Provisioning Mode"
+        depends on USE_WIFI_PROVISIONING_SOFTAP
+        default BSP_RESET_PROVISIONING_NONE
+        help
+            Reset method of the WiFi and API key provisioning.
+        config BSP_RESET_PROVISIONING_NONE
+            bool None
+        config BSP_RESET_PROVISIONING_GPIO
+            bool GPIO
+    endchoice
+    config BSP_RESET_PROVISIONING_GPIO_NUM
+        int "Reset provisioning GPIO number"
+        depends on BSP_RESET_PROVISIONING_GPIO
+        default 0
+        help
+            GPIO number to detect provisioned WiFi and API key must be reset or not.
+    choice BSP_RESET_PROVISIONING_GPIO_LEVEL
+        prompt "Reset provisioning GPIO level"
+        depends on BSP_RESET_PROVISIONING_GPIO
+        default BSP_RESET_PROVISIONING_GPIO_LEVEL_LOW
+        config BSP_RESET_PROVISIONING_GPIO_LEVEL_HIGH
+            bool "Active High"
+        config BSP_RESET_PROVISIONING_GPIO_LEVEL_LOW
+            bool "Active Low"
+    endchoice
     config ENABLE_HEAP_MONITOR
         bool "Enable Heap Monitor"
         default n
