@@ -93,4 +93,61 @@ ffmpeg -y -f s16le -ar 8k -ac 1 -i audio_input.pcm audio_input.wav
 ffmpeg -y -f s16le -ar 8k -ac 1 -i audio_output.pcm audio_output.wav
 ```
 
-## Usage
+## Pre-built binaries
+
+Pre-built binaries for some boards are also provided via GitHub release page or M5Burner.
+You can download the pre-built binaries from the Releases page of this repository.
+
+https://github.com/ciniml/openai-realtime-embedded-sdk/releases/
+
+## Wi-Fi provisioning via Espressif SoftAP provisioning tool
+
+With `CONFIG_USE_WIFI_PROVISIONING_SOFTAP` enabled, Wi-Fi credentials are provisioned by Espressif SoftAP provisioning scheme instead of embedding the credentials into the firmware.
+
+You can use the Espressif official provisioning tool listed here to configure the WiFi connection.
+
+https://docs.espressif.com/projects/esp-idf/en/stable/esp32/api-reference/provisioning/wifi_provisioning.html#provisioning-tools
+
+The device will show the QR code for provisioning app on the serial console after boot. (The user name and password (pop) are hardcoded in the firmware and using the same value for all pre-built firmwares, so you can use the same QR code here.)
+
+```
+I (1149) QRCODE: {"ver":"v1","name":"OAI_RES_WIFI","username":"wifiprov","pop":"abcd1234","transport":"softap"}
+                                          
+  █▀▀▀▀▀█ ▀▄▄▀▀▀▄  █▄▄▀▀   ▀█ █ █▀▀▀▀▀█   
+  █ ███ █   ▀ ██▀ █▄█▀ █▀▄██▄██ █ ███ █   
+  █ ▀▀▀ █  ▀▄▀▄██ ▄▀▄▀▀██▄▄▀█▀█ █ ▀▀▀ █   
+  ▀▀▀▀▀▀▀ █ █▄▀▄▀▄▀ ▀▄▀ ▀▄▀▄█▄█ ▀▀▀▀▀▀▀   
+  ▀█ ██▄▀ ▄█▀▀▄ █▄▄▀▀█ ▄▄▄▀ ▄▀▀▄▀ ▄ ▄ ▀   
+   █▀█ ▀▀ ▄▄██▄▀ █▄█▄▄  ▀█▄▀▀▀██   ▀██▀   
+  ▄ ▄▄ █▀ ▀ ▀▀▀▄ █▀ █▀▀ ▄▄▀▄  █▀▀█▄ ▄█▀   
+   █  ▀█▀▄█▀▀█▀▀█▀▀▀██▄ ▄▄ ▀▀█  ▀▄▄▀▄██   
+  █ ▄▄▄▄▀  ██▄▄▀ █▀ █▄█ ▄▀ ▀▄▀▀▄█▄ ▀█▄▀   
+  ██▀  ▀▀▄▄██▀▄█▀█▀▀▄█▄ ▀██▄▀█▄▄  ▀█  ▀   
+    ▀   ▀██ █ ▀ ▀█ ▀██ ▄█▄█ █  ▀███▄▄█▀   
+  ▀▀▀▀▄ ▀ ▄█▄ ▀ ▀█▀▄█▄▀▀█▀█ ▄██▀█▀▀▀█▄▀   
+  ██ █▀▄▀▄▄█▄ ▄▄█▄█  ▀█ ▀▄▄▄ ▀▄ █▀▄  ▀▀   
+  █▀█▀ █▀▄▀   ▄ ▄▀█ ▄█▄ █▄█ ▄▀ ▄▄█▀ █▄▀   
+  ▀ ▀  ▀▀▀▄▄▀█▀█▄█▀▄ █  ▀▀██ ▀█▀▀▀█▀█▀    
+  █▀▀▀▀▀█   ▀▄▀█ █  █▀█▀▀▀ ▄▄██ ▀ █▀  ▀   
+  █ ███ █ ██▄▀▄█▄█ ▀▄█▄▄▄▄▀ █▀▀██▀▀█ █▄   
+  █ ▀▀▀ █ ▄███▄█ █ █▀ ▀ ▀█  ██▄ ▀▀█▀▄▄█   
+  ▀▀▀▀▀▀▀ ▀ ▀▀▀▀  ▀  ▀    ▀   ▀  ▀▀▀  ▀   
+```
+
+
+If you cannot see the serial console, you can use [this link](https://espressif.github.io/esp-jumpstart/qrcode.html?data={%22ver%22:%22v1%22,%22name%22:%22OAI_RES_WIFI%22,%22username%22:%22wifiprov%22,%22pop%22:%22abcd1234%22,%22transport%22:%22softap%22}) to show the QR code on the browser.
+
+## OpenAI API key configuration
+
+With `CONFIG_USE_WIFI_PROVISIONING_SOFTAP`, OpenAI API key is configured via web browser. 
+After Wi-Fi connection is established, you can access to the configuration page via http://oai-res-example.local/ 
+
+![API key configuration](api_key_configuration.png)
+
+## Reset the Wi-Fi and OpenAI API configuration
+
+For some devices, you can trigger to reset the WiFi and OpenAI API configuration by pressing a button while booting.
+
+* AtomS3: Press the screen button while booting.
+* Atom Lite: Press the top button while booting.
+* CoreS3 (SE): No configuration reset button. To reset the configuration, reprogram the firmware.
