@@ -3,16 +3,7 @@ cmake_minimum_required(VERSION 3.19)
 # Audio Sending is implemented, but not performant enough yet
 add_compile_definitions(SEND_AUDIO=0)
 
-if(NOT DEFINED ENV{CI_BUILD})
-  if(NOT IDF_TARGET STREQUAL linux)
-    if(NOT DEFINED ENV{WIFI_SSID} OR NOT DEFINED ENV{WIFI_PASSWORD})
-      message(FATAL_ERROR "Env variables WIFI_SSID and WIFI_PASSWORD must be set")
-    endif()
-
-    add_compile_definitions(WIFI_SSID="$ENV{WIFI_SSID}")
-    add_compile_definitions(WIFI_PASSWORD="$ENV{WIFI_PASSWORD}")
-  endif()
-
+if(IDF_TARGET STREQUAL linux)
   if(NOT DEFINED ENV{OPENAI_API_KEY})
     message(FATAL_ERROR "Env variable OPENAI_API_KEY must be set")
   endif()
