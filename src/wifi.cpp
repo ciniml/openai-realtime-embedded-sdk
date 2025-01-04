@@ -10,6 +10,7 @@
 #include <esp_http_server.h>
 #include <nvs.h>
 #include <mdns.h>
+#include <string>
 #endif // CONFIG_USE_WIFI_PROVISIONING_SOFTAP
 
 #include <stdio.h>
@@ -63,6 +64,7 @@ static const char sec2_verifier[] = {
 
 constexpr const char* OAI_NVS_NS = "oai";
 constexpr const char* OAI_API_KEY_NVS_KEY = "oai_api_key";
+constexpr const char* OAI_API_URI_NVS_KEY = "oai_api_uri";
 
 extern const uint8_t index_html_start[] asm("_binary_index_html_start");
 extern const uint8_t index_html_end[]   asm("_binary_index_html_end");
@@ -168,14 +170,98 @@ esp_err_t oai_set_api_key(const char* api_key)
   return ESP_OK;
 }
 
+/**
+ * Get the API URI from the NVS or the default value
+ */
+esp_err_t oai_get_api_uri(std::string& api_uri)
+{
+  nvs_handle_t nvs_handle;
+  if( esp_err_t err = nvs_open(OAI_NVS_NS, NVS_READONLY, &nvs_handle); err != ESP_OK ) {
+      return err;
+  }
+
+  size_t required_size = 0;
+  esp_err_t err = nvs_get_str(nvs_handle, OAI_API_URI_NVS_KEY, nullptr, &required_size);
+  if( err != ESP_OK && err != ESP_ERR_NVS_NOT_FOUND ) {
+      nvs_close(nvs_handle);
+      return err;
+  }
+
+  if( err == ESP_ERR_NVS_NOT_FOUND ) {
+    api_uri = OPENAI_REALTIMEAPI;
+    return ESP_OK;
+  }
+
+  std::vector<char> api_uri_buf(required_size);
+  if( esp_err_t err = nvs_get_str(nvs_handle, OAI_API_URI_NVS_KEY, api_uri_buf.data(), &required_size); err != ESP_OK ) {
+      nvs_close(nvs_handle);
+      return err;
+  }
+
+  api_uri = api_uri_buf.data();
+
+  nvs_close(nvs_handle);
+  return ESP_OK;
+}
+
+/**
+ * Set the API URI in the NVS
+ */
+esp_err_t oai_set_api_uri(const char* api_uri)
+{
+  assert(api_uri != nullptr);
+
+  nvs_handle_t nvs_handle;
+  if( esp_err_t err = nvs_open(OAI_NVS_NS, NVS_READWRITE, &nvs_handle); err != ESP_OK ) {
+      return err;
+  }
+
+  esp_err_t ret = nvs_set_str(nvs_handle, OAI_API_URI_NVS_KEY, api_uri);
+  if( ret != ESP_OK ) {
+      nvs_close(nvs_handle);
+      return ret;
+  }
+
+  ret = nvs_commit(nvs_handle);
+  if( ret != ESP_OK ) {
+      nvs_close(nvs_handle);
+      return ret;
+  }
+
+  nvs_close(nvs_handle);
+  return ESP_OK;
+}
+
 static esp_err_t config_http_get_handler(httpd_req_t* req)
 {
-  if( strncmp(req->uri, "/", 1) == 0 || strncmp(req->uri, "/index.html", 11) == 0 ) {
+  if( strncmp(req->uri, "/", 2) == 0 || strncmp(req->uri, "/index.html", 11) == 0 ) {
     httpd_resp_set_status(req, "200 OK");
     httpd_resp_set_type(req, "text/html");
     size_t content_length = index_html_end - index_html_start;
     httpd_resp_send(req, reinterpret_cast<const char*>(index_html_start), content_length);
     return ESP_OK;
+  } else if( strncmp(req->uri, "/api_key", 8) == 0 ) {
+    std::vector<char> api_key;
+    if( esp_err_t err = oai_get_api_key(api_key); err != ESP_OK && err != ESP_ERR_NVS_NOT_FOUND ) {
+      httpd_resp_set_status(req, "500 Internal Server Error");
+      httpd_resp_set_type(req, "text/plain");
+      httpd_resp_send(req, "Internal Server Error", 20);
+      return err;
+    }
+    httpd_resp_set_status(req, "200 OK");
+    httpd_resp_set_type(req, "text/plain");
+    httpd_resp_send(req, api_key.data(), api_key.size());
+  } else if( strncmp(req->uri, "/api_uri", 8) == 0 ) {
+    std::string api_uri = CONFIG_OPENAI_REALTIMEAPI;
+    if( esp_err_t err = oai_get_api_uri(api_uri); err != ESP_OK && err != ESP_ERR_NVS_NOT_FOUND ) {
+      httpd_resp_set_status(req, "500 Internal Server Error");
+      httpd_resp_set_type(req, "text/plain");
+      httpd_resp_send(req, "Internal Server Error", 20);
+      return err;
+    }
+    httpd_resp_set_status(req, "200 OK");
+    httpd_resp_set_type(req, "text/plain");
+    httpd_resp_send(req, api_uri.c_str(), api_uri.size());
   } else {
     httpd_resp_set_status(req, "404 Not Found");
     httpd_resp_set_type(req, "text/plain");
@@ -187,6 +273,11 @@ static esp_err_t config_http_get_handler(httpd_req_t* req)
 
 static esp_err_t config_http_post_handler(httpd_req_t* req)
 {
+  if( strncmp(req->uri, "/reboot", 8) == 0 ) {
+    ESP_LOGI(LOG_TAG, "Rebooting the device...");
+    esp_restart();
+  }
+
   size_t buf_len = req->content_len + 1;
   std::vector<char> buf(buf_len);
   if( httpd_req_recv(req, buf.data(), buf_len) <= 0 ) {
@@ -194,26 +285,31 @@ static esp_err_t config_http_post_handler(httpd_req_t* req)
   }
 
   buf[buf_len - 1] = '\0';
-
-  // Check if the buffer starts with "apikey="
-  if( strncmp(buf.data(), "api_key=", 8) != 0 ) {
-    ESP_LOGE(LOG_TAG, "The request does not contain an API key");
-    return ESP_FAIL;
-  }
   // Trim the newline character
   size_t line_len = strnlen(buf.data(), buf_len - 1);
   if( buf[line_len - -1] == '\n' ) {
     buf[line_len - 1] = '\0';
   }
-  ESP_LOGI(LOG_TAG, "Received API key: %s", buf.data() + 8);
-  if( esp_err_t err = oai_set_api_key(buf.data() + 8); err != ESP_OK ) {
-    ESP_LOGE(LOG_TAG, "Failed to store the API key in the NVS - %s(%d)", esp_err_to_name(err), err);
-    return err;
-  }
 
-  // Notify to the task.
-  if( req->user_ctx != nullptr ) {
-    xTaskNotifyGive(reinterpret_cast<TaskHandle_t>(req->user_ctx));
+  if( strncmp(req->uri, "/api_key", 9) == 0 ) {
+    ESP_LOGI(LOG_TAG, "Received API key: %s", buf.data());
+    if( esp_err_t err = oai_set_api_key(buf.data()); err != ESP_OK ) {
+      ESP_LOGE(LOG_TAG, "Failed to store the API key in the NVS - %s(%d)", esp_err_to_name(err), err);
+      return err;
+    }
+    // Notify to the task.
+    if( req->user_ctx != nullptr ) {
+      xTaskNotifyGive(reinterpret_cast<TaskHandle_t>(req->user_ctx));
+    }
+  } else if( strncmp(req->uri, "/api_uri", 9) == 0 ) {
+    ESP_LOGI(LOG_TAG, "Received API URI: %s", buf.data());
+    if( esp_err_t err = oai_set_api_uri(buf.data()); err != ESP_OK ) {
+      ESP_LOGE(LOG_TAG, "Failed to store the API URI in the NVS - %s(%d)", esp_err_to_name(err), err);
+      return err;
+    }
+  } else {
+    ESP_LOGW(LOG_TAG, "Unknown POST request: %s", buf.data());
+    return ESP_FAIL;
   }
 
   httpd_resp_set_status(req, "200 OK");
@@ -240,15 +336,28 @@ static esp_err_t  oai_config_httpd_start()
       .handler   = config_http_get_handler,
       .user_ctx  = nullptr
   };
-  const httpd_uri_t config_http_post_uri = {
-      .uri       = "/apikey",
+  
+  httpd_register_uri_handler(s_config_server, &config_http_get_uri);
+  const char* get_uris[] = {"/index.html", "/api_key", "/api_uri"};
+  for( const auto& uri : get_uris ) {
+    httpd_uri_t uri_handler = {
+      .uri       = uri,
+      .method    = HTTP_GET,
+      .handler   = config_http_get_handler,
+      .user_ctx  = nullptr
+    };
+    httpd_register_uri_handler(s_config_server, &uri_handler);
+  }
+  const char* post_uris[] = {"/api_key", "/api_uri", "/reboot"};
+  for( const auto& uri : post_uris ) {
+    httpd_uri_t uri_handler = {
+      .uri       = uri,
       .method    = HTTP_POST,
       .handler   = config_http_post_handler,
       .user_ctx  = xTaskGetCurrentTaskHandle(),
-  };
-
-  httpd_register_uri_handler(s_config_server, &config_http_get_uri);
-  httpd_register_uri_handler(s_config_server, &config_http_post_uri);
+    };
+    httpd_register_uri_handler(s_config_server, &uri_handler);
+  }
   
   // Start mDNS
   if( auto err = mdns_init(); err != ESP_OK ) {
@@ -428,6 +537,11 @@ void oai_wifi(void) {
     ESP_ERROR_CHECK(esp_wifi_connect());
   }
 
+  // block until we get an IP address
+  while (!g_wifi_connected) {
+    vTaskDelay(pdMS_TO_TICKS(200));
+  }
+
   bool has_api_key = false;
   if( auto err = oai_has_api_key(has_api_key); err != ESP_OK || !has_api_key || reset_provisioning ) {
     ESP_LOGW(LOG_TAG, "API key not set");
@@ -436,16 +550,17 @@ void oai_wifi(void) {
     // Wait for the API key to be set
     ESP_LOGI(LOG_TAG, "Waiting for the API key to be set");
     ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
+#ifdef CONFIG_DISABLE_CONFIGURATOR_AFTER_PROVISIONED
     // Stop the HTTP server
     oai_config_httpd_stop();
+#endif
   } else {
     ESP_LOGI(LOG_TAG, "API key found.");
+#ifndef CONFIG_DISABLE_CONFIGURATOR_AFTER_PROVISIONED
+    // Strat the HTTP server.
+    ESP_ERROR_CHECK(oai_config_httpd_start());
+#endif
   }
 
 #endif // CONFIG_USE_WIFI_PROVISIONING_SMARTCONFIG
-
-  // block until we get an IP address
-  while (!g_wifi_connected) {
-    vTaskDelay(pdMS_TO_TICKS(200));
-  }
 }

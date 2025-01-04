@@ -94,6 +94,31 @@ menu "Embedded SDK Configuration"
         default n
         help
             Use SoftAP for WiFi provisioning
+    config WIFI_SSID
+        string "WiFi SSID"
+        depends on !USE_WIFI_PROVISIONING_SOFTAP
+        help
+            The SSID of the SoftAP for WiFi
+    config WIFI_PASSWORD
+        string "WiFi Password"
+        depends on !USE_WIFI_PROVISIONING_SOFTAP
+        help
+            The password of the SoftAP for WiFi
+    config OPENAI_API_KEY
+        string "OpenAI API Key"
+        depends on !USE_WIFI_PROVISIONING_SOFTAP
+        help
+            The OpenAI API key
+    config OPENAI_REALTIMEAPI
+        string "OpenAI Realtime API"
+        default "https://api.openai.com/v1/realtime?model=gpt-4o-mini-realtime-preview-2024-12-17"
+        help
+            The OpenAI Realtime API URI
+    config DISABLE_CONFIGURATOR_AFTER_PROVISIONED
+        bool "Disable configurator after provisioned"
+        default n
+        help
+            Disables the configurator HTTP server after OpenAI API key is provisioned.
     choice BSP_RESET_PROVISIONING
         prompt "Reset Provisioning Mode"
         depends on USE_WIFI_PROVISIONING_SOFTAP

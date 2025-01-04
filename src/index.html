@@ -1,15 +1,69 @@
 <html>
     <head>
         <title>OpenAI Realtime Embedded SDK Example Configuration</title>
+        <script lang="javascript">
+            function enableSubmitButton(enabled) {
+                const submitApiKeyButton = document.getElementById("submit_api_key");
+                const submitApiUriButton = document.getElementById("submit_api_uri");
+                const submitRebootButton = document.getElementById("submit_reboot");
+                submitApiKeyButton.disabled = !enabled;
+                submitApiUriButton.disabled = !enabled;
+                submitRebootButton.disabled = !enabled;
+            }
+            async function fetchValues() {
+                document.getElementById("api_key").value = await fetch("/api_key").then(response => response.text());
+                document.getElementById("api_uri").value = decodeURI(await fetch("/api_uri").then(response => response.text()));
+            }
+            async function postRequest(url, data) {
+                try {
+                    enableSubmitButton(false);
+                    const response = await fetch(url, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'text/plain',
+                        },
+                        body: data,
+                    });
+                    return response;
+                } finally {
+                    enableSubmitButton(true);
+                }
+            }
+            async function updateApiKey() {
+                var api_key = document.getElementById("api_key").value;
+                await postRequest("/api_key", api_key);
+            }
+            async function updateApiUri() {
+                var api_uri = document.getElementById("api_uri").value;
+                const api_uri_encoded = encodeURI(api_uri);
+                await postRequest("/api_uri", api_uri_encoded);
+            }
+            async function reboot() {
+                var xhr = new XMLHttpRequest();
+                await postRequest("/reboot", null);
+            }
+
+            window.addEventListener('load', (event) => {
+                fetchValues();
+            });
+        </script>
     </head>
     <body>
         <h1>OpenAI Realtime Embedded SDK Example Configuration</h1>
         <div>
             <h2>Configuration</h2>
-            <form action="apikey" method="post" enctype="text/plain">
+            <form onsubmit="updateApiKey(); return false">
                 <label for="api_key">OpenAI API Key:</label>
                 <input type="text" id="api_key" name="api_key" required>
-                <input type="submit" value="OK">
+                <input id="submit_api_key" type="submit" value="OK" >
+            </form>
+            <form onsubmit="updateApiUri(); return false">
+                <label for="api_uri">OpenAI API Base URI:</label>
+                <input type="text" id="api_uri" name="api_uri" required>
+                <input id="submit_api_uri" type="submit" value="OK">
+            </form>
+            <form onsubmit="reboot(); return false">
+                <input id="submit_reboot" type="submit" value="Reboot">
             </form>
         </div>
     </body>

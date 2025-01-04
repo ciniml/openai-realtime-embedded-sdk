@@ -1,6 +1,7 @@
 #include <esp_http_client.h>
 #include <esp_log.h>
 #include <string.h>
+#include <string>
 #include <vector>
 
 #include "main.h"
@@ -74,7 +75,14 @@ void oai_http_request(char *offer, char *answer) {
   esp_http_client_config_t config;
   memset(&config, 0, sizeof(esp_http_client_config_t));
 
-  config.url = OPENAI_REALTIMEAPI;
+  extern esp_err_t oai_get_api_uri(std::string& api_uri);
+  std::string api_uri;
+  if( auto err = oai_get_api_uri(api_uri); err != ESP_OK ) {
+    api_uri = CONFIG_OPENAI_REALTIMEAPI;
+  }
+  config.url = api_uri.c_str();
+  ESP_LOGI(LOG_TAG, "Using API URI: %s", config.url);
+  
   config.event_handler = oai_http_event_handler;
   config.user_data = answer;
 
@@ -91,19 +99,22 @@ void oai_http_request(char *offer, char *answer) {
   snprintf(answer, MAX_HTTP_OUTPUT_BUFFER, "Bearer %s", OPENAI_API_KEY);
 #endif
 
-  esp_http_client_handle_t client = esp_http_client_init(&config);
-  esp_http_client_set_method(client, HTTP_METHOD_POST);
-  esp_http_client_set_header(client, "Content-Type", "application/sdp");
-  esp_http_client_set_header(client, "Authorization", answer);
-  esp_http_client_set_post_field(client, offer, strlen(offer));
+  if( esp_http_client_handle_t client = esp_http_client_init(&config); client == nullptr ) {
+    ESP_LOGE(LOG_TAG, "Failed to initialize HTTP client");
+  } else {
+    esp_http_client_set_method(client, HTTP_METHOD_POST);
+    esp_http_client_set_header(client, "Content-Type", "application/sdp");
+    esp_http_client_set_header(client, "Authorization", answer);
+    esp_http_client_set_post_field(client, offer, strlen(offer));
 
-  esp_err_t err = esp_http_client_perform(client);
-  if (err != ESP_OK || esp_http_client_get_status_code(client) != 201) {
-    ESP_LOGE(LOG_TAG, "Error perform http request %s", esp_err_to_name(err));
-#ifndef LINUX_BUILD
-    esp_restart();
-#endif
+    esp_err_t err = esp_http_client_perform(client);
+    if (err != ESP_OK || esp_http_client_get_status_code(client) != 201) {
+      ESP_LOGE(LOG_TAG, "Error perform http request %s", esp_err_to_name(err));
+  #if !defined(LINUX_BUILD) && defined(CONFIG_DISABLE_CONFIGURATOR_AFTER_PROVISIONED)
+      esp_restart();
+  #endif
+    }
+
+    esp_http_client_cleanup(client);
   }
-
-  esp_http_client_cleanup(client);
 }

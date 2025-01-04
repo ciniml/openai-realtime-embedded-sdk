@@ -32,7 +32,7 @@ static void oai_onconnectionstatechange_task(PeerConnectionState state,
 
   if (state == PEER_CONNECTION_DISCONNECTED ||
       state == PEER_CONNECTION_CLOSED) {
-#ifndef LINUX_BUILD
+#if !defined(LINUX_BUILD) && defined(CONFIG_DISABLE_CONFIGURATOR_AFTER_PROVISIONED)
     esp_restart();
 #endif
   } else if (state == PEER_CONNECTION_CONNECTED) {
