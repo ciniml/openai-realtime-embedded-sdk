@@ -10,13 +10,13 @@
 #include <esp_http_server.h>
 #include <nvs.h>
 #include <mdns.h>
-#include <string>
 #endif // CONFIG_USE_WIFI_PROVISIONING_SOFTAP
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <vector>
+#include <string>
 
 #include "main.h"
 #include "bsp.h"
@@ -382,7 +382,15 @@ static esp_err_t oai_config_httpd_stop()
   s_config_server = nullptr;
   return ESP_OK;
 }
-
+#else // CONFIG_USE_WIFI_PROVISIONING_SOFTAP
+/**
+ * Get the API URI from the default value
+ */
+esp_err_t oai_get_api_uri(std::string& api_uri)
+{
+  api_uri = CONFIG_OPENAI_REALTIMEAPI;
+  return ESP_OK;
+}
 #endif // CONFIG_USE_WIFI_PROVISIONING_SOFTAP
 
 static bool g_wifi_connected = false;
@@ -489,12 +497,12 @@ void oai_wifi(void) {
   ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_STA));
   ESP_ERROR_CHECK(esp_wifi_start());
 
-  ESP_LOGI(LOG_TAG, "Connecting to WiFi SSID: %s", WIFI_SSID);
+  ESP_LOGI(LOG_TAG, "Connecting to WiFi SSID: %s", CONFIG_WIFI_SSID);
   wifi_config_t wifi_config;
   memset(&wifi_config, 0, sizeof(wifi_config));
-  strncpy((char *)wifi_config.sta.ssid, (char *)WIFI_SSID,
+  strncpy((char *)wifi_config.sta.ssid, (char *)CONFIG_WIFI_SSID,
           sizeof(wifi_config.sta.ssid));
-  strncpy((char *)wifi_config.sta.password, (char *)WIFI_PASSWORD,
+  strncpy((char *)wifi_config.sta.password, (char *)CONFIG_WIFI_PASSWORD,
           sizeof(wifi_config.sta.password));
 
   ESP_ERROR_CHECK(esp_wifi_set_config(
