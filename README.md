@@ -25,9 +25,9 @@ You can get a ESP32S3 for much less money on eBay/AliExpress.
 
 Select the target board.
 
-* CoreS3 (SE) - `export SDK_CONFIG="sdkconfig.defaults;sdkconfig.defaults.cores3`
-* AtomS3    (with Atomic Speaker and PDM Microphone Unit) - `export SDK_CONFIG="sdkconfig.defaults;sdkconfig.defaults.atoms3`
-* Atom Lite (with Atomic Speaker and PDM Microphone Unit) - `export SDK_CONFIG="sdkconfig.defaults;sdkconfig.defaults.atom_lite`
+* CoreS3 (SE) - `export SDKCONFIG_DEFAULTS="sdkconfig.defaults;sdkconfig.defaults.cores3`
+* AtomS3    (with Atomic Speaker and PDM Microphone Unit) - `export SDKCONFIG_DEFAULTS="sdkconfig.defaults;sdkconfig.defaults.atoms3`
+* Atom Lite (with Atomic Speaker and PDM Microphone Unit) - `export SDKCONFIG_DEFAULTS="sdkconfig.defaults;sdkconfig.defaults.atom_lite`
 
 Call `set-target` with the platform you are targetting. Today only `linux`, `esp32` and `esp32s3` are supported.
 
