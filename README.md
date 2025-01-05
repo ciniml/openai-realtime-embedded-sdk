@@ -42,10 +42,10 @@ Note that to change the target, you have to remove the build directory.
 Configure device specific settings. None needed at this time
 * `idf.py menuconfig`
 
-Set your Wifi SSID + Password as env variables
-* `export WIFI_SSID=foo`
-* `export WIFI_PASSWORD=bar`
-* `export OPENAI_API_KEY=bing`
+If you want to use WiFi provisioning via SoftAP and OpenAI API configuration via Web UI interface, enable `CONFIG_USE_WIFI_PROVISIONING_SOFTAP`
+
+If you did not enable `CONFIG_USE_WIFI_PROVISIONING_SOFTAP`, set your Wifi SSID + Password and OpenAI API key in the configuration. 
+You must set `CONFIG_WIFI_SSID` `CONFIG_WIFI_PASSWORD` and `CONFIG_OPENAI_API_KEY` correctly.
 
 Build
 * `idf.py build`
