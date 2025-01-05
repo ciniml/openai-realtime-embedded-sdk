@@ -96,7 +96,7 @@ void oai_http_request(char *offer, char *answer) {
     snprintf(answer, MAX_HTTP_OUTPUT_BUFFER, "Bearer %s", api_key.data());
   }
 #else // CONFIG_USE_WIFI_PROVISIONING_SOFTAP
-  snprintf(answer, MAX_HTTP_OUTPUT_BUFFER, "Bearer %s", OPENAI_API_KEY);
+  snprintf(answer, MAX_HTTP_OUTPUT_BUFFER, "Bearer %s", CONFIG_OPENAI_API_KEY);
 #endif
 
   if( esp_http_client_handle_t client = esp_http_client_init(&config); client == nullptr ) {
