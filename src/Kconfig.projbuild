@@ -157,4 +157,10 @@ menu "Embedded SDK Configuration"
         depends on ENABLE_HEAP_MONITOR
         help
             The interval in milliseconds to print the heap monitor.
+    config ENABLE_LOG_DATACHANNEL_MESSAGES
+        bool "Enable Log DataChannel Messages"
+        default n
+        help
+            If this option is set (not default), 
+            the data channel messages will be logged.
 endmenu

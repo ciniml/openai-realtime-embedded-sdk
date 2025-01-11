@@ -21,8 +21,6 @@ You can get a ESP32S3 for much less money on eBay/AliExpress.
 
 ## Installation
 
-`protoc` must be in your path with `protobufc` installed.
-
 Select the target board.
 
 * CoreS3 (SE) - `export SDKCONFIG_DEFAULTS="sdkconfig.defaults;sdkconfig.defaults.cores3"`

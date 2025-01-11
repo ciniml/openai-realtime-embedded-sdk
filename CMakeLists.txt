@@ -1,17 +1,17 @@
 cmake_minimum_required(VERSION 3.19)
 
-# Audio Sending is implemented, but not performant enough yet
-add_compile_definitions(SEND_AUDIO=0)
-
 if(IDF_TARGET STREQUAL linux)
   if(NOT DEFINED ENV{OPENAI_API_KEY})
     message(FATAL_ERROR "Env variable OPENAI_API_KEY must be set")
   endif()
-
   add_compile_definitions(OPENAI_API_KEY="$ENV{OPENAI_API_KEY}")
 endif()
 
-add_compile_definitions(OPENAI_REALTIMEAPI="https://api.openai.com/v1/realtime?model=gpt-4o-realtime-preview-2024-10-01")
+add_compile_definitions(OPENAI_REALTIMEAPI="https://api.openai.com/v1/realtime?model=gpt-4o-mini-realtime-preview-2024-12-17")
+
+if(DEFINED ENV{LOG_DATACHANNEL_MESSAGES})
+  add_compile_definitions(LOG_DATACHANNEL_MESSAGES="1")
+endif()
 
 set(COMPONENTS src)
 set(EXTRA_COMPONENT_DIRS "src" "components/srtp" "components/peer" "components/esp-libopus")
