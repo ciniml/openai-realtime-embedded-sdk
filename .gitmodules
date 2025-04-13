@@ -3,7 +3,7 @@
 	url = https://git@github.com/sepfy/esp_ports
 [submodule "deps/libpeer"]
 	path = deps/libpeer
-	url = https://github.com/sean-der/libpeer
+	url = https://github.com/ciniml/libpeer.git
 [submodule "components/esp-libopus"]
 	path = components/esp-libopus
 	url = https://github.com/XasWorks/esp-libopus.git
